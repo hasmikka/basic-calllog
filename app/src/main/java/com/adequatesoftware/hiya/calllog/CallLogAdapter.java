@@ -5,18 +5,22 @@ import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.Animation;
 import android.widget.TextView;
 
 import com.adequatesoftware.hiya.calllog.datamodel.CallLogItem;
 
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 
 public class CallLogAdapter extends RecyclerView.Adapter<CallLogAdapter.CallLogViewHolder> {
     private ArrayList<CallLogItem> data;
 
-    public CallLogAdapter(ArrayList<CallLogItem> data){
-        this.data = data;
+    public CallLogAdapter(){}
 
+    public void setData(ArrayList<CallLogItem> items){
+        this.data = items;
+        notifyDataSetChanged();
     }
 
     @Override
@@ -38,7 +42,7 @@ public class CallLogAdapter extends RecyclerView.Adapter<CallLogAdapter.CallLogV
 
             holder.number.setText(item.getPhoneNumber());
             holder.type.setText(item.getCallType());
-            holder.date.setText(item.getTime().toString());
+            holder.date.setText(item.getTimeString());
         }
     }
 
@@ -46,6 +50,8 @@ public class CallLogAdapter extends RecyclerView.Adapter<CallLogAdapter.CallLogV
     public int getItemCount() {
         return (null != data ? data.size() : 0);
     }
+
+
 
 
     ///// View Holder ////

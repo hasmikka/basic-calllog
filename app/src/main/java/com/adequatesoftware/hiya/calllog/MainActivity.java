@@ -6,16 +6,17 @@ import android.database.Cursor;
 import android.provider.CallLog;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
+import android.support.v4.widget.SwipeRefreshLayout;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 
 import com.adequatesoftware.hiya.calllog.datamodel.CallLogItem;
+import com.adequatesoftware.hiya.calllog.datamodel.DisplayUtil;
 
-import java.lang.reflect.Array;
 import java.util.ArrayList;
-import java.util.Date;
 
 
 /**
@@ -26,42 +27,60 @@ import java.util.Date;
  * animations
  * live-listening to changes in log
  * scroll to new item?
- * onsavedinstantstate
  * javadoc for everying
- * format date before display
  * styles for fonts
  * define empty state for no call log
  * error handling
  * analytics?
+ * cursor adapter?
+ * swipe to refresh
  */
 
 public class MainActivity extends AppCompatActivity {
 
     private static int MY_PERMISSIONS_REQUEST_READ_LOGS = 22;
-    private ArrayList<CallLogItem> data;
-    private CallLogAdapter adapter;
-    private RecyclerView callLogList;
+    private static int MAXIMUM_NUMBER_LOG_REQUESTED = 50;
+    private ArrayList<CallLogItem> mData;
+    private CallLogAdapter mAdapter;
+    private RecyclerView mCallListRecycleView;
+    private SwipeRefreshLayout mSwipeLayout;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        mCallListRecycleView = (RecyclerView) findViewById(R.id.main_list);
+        mCallListRecycleView.setLayoutManager(new LinearLayoutManager(this));
+
+        mAdapter = new CallLogAdapter();
+        mCallListRecycleView.setAdapter(mAdapter);
+
+        mSwipeLayout = (SwipeRefreshLayout) findViewById(R.id.main_swipe);
+
+        mSwipeLayout.setColorSchemeResources(android.R.color.holo_blue_bright,
+                android.R.color.holo_green_light,
+                android.R.color.holo_orange_light,
+                android.R.color.holo_red_light);
 
 
-        callLogList = (RecyclerView) findViewById(R.id.mainList);
-        callLogList.setLayoutManager(new LinearLayoutManager(this));
+        mSwipeLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
+            @Override
+            public void onRefresh() {
+                //to prevent swipe
+                mSwipeLayout.setEnabled(false);
+                fetchCallLogData();
+            }
 
-        adapter = new CallLogAdapter(data);
-        callLogList.setAdapter(adapter);
+        });
 
     }
 
     @Override
-    public void onResume() {
-        super.onResume();
+    public void onStart() {
+        super.onStart();
 
-        if (data != null){
+        if (mData != null){
             displayData();
         } else {
             fetchCallLogData();
@@ -69,9 +88,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void displayData(){
-        adapter = new CallLogAdapter(data);
-        callLogList.setAdapter(adapter);
-
+        mAdapter.setData(mData);
+        mSwipeLayout.setRefreshing(false);
+        mSwipeLayout.setEnabled(true);
     }
 
     private void fetchCallLogData(){
@@ -81,14 +100,8 @@ public class MainActivity extends AppCompatActivity {
 
         if (permissionCheck == PackageManager.PERMISSION_GRANTED) {
             fetchData();
-
         } else {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_CALL_LOG}, MY_PERMISSIONS_REQUEST_READ_LOGS);
-
-            /**
-             * //TODO permission check failed
-             * https://developer.android.com/training/permissions/requesting.html
-             */
         }
 
     }
@@ -98,7 +111,8 @@ public class MainActivity extends AppCompatActivity {
         ArrayList<CallLogItem> data = new ArrayList<>();
 
         try {
-            Cursor cursor = getContentResolver().query(CallLog.Calls.CONTENT_URI, null, null, null, null);
+            //setting order desc because otherwise we get the first 50 calls made on a phone
+            Cursor cursor = getContentResolver().query(CallLog.Calls.CONTENT_URI, null, null, null, "date DESC");
 
             int number = cursor.getColumnIndex(CallLog.Calls.NUMBER);
             int type = cursor.getColumnIndex(CallLog.Calls.TYPE);
@@ -107,29 +121,18 @@ public class MainActivity extends AppCompatActivity {
 
             int count = 0;
 
-            while (cursor.moveToNext() && count < 50) {
+            while (cursor.moveToNext() && count < MAXIMUM_NUMBER_LOG_REQUESTED) {
 
                 //get type of call
-                int typeV = cursor.getInt(type);
-                String typeValStr = "Unknown";
-
-                switch (typeV) {
-                    case CallLog.Calls.OUTGOING_TYPE:
-                        typeValStr = "Outgoing";
-                        break;
-                    case CallLog.Calls.INCOMING_TYPE:
-                        typeValStr = "Incoming";
-                        break;
-                    case CallLog.Calls.MISSED_TYPE:
-                        typeValStr = "Missed";
-                        break;
-                }
+                String typeValStr = DisplayUtil.getTypeOfCall(cursor.getInt(type));
 
                 //get date
+                String dateStr = DisplayUtil.getDate(cursor.getString(date));
 
-                Date callDate = new Date(Long.valueOf(cursor.getString(date)));
+                //get number
+                String num = cursor.getString(number);
 
-                CallLogItem item = new CallLogItem(cursor.getString(number), cursor.getString(duration), typeValStr, callDate);
+                CallLogItem item = new CallLogItem(DisplayUtil.formatNumber(num), cursor.getString(duration), typeValStr, dateStr);
                 data.add(item);
                 count++;
             }
@@ -137,15 +140,12 @@ public class MainActivity extends AppCompatActivity {
             //TODO log somehow we got here without being given permission. wtf?
         }
 
-        this.data = data;
+        this.mData = data;
 
-        if (this.data != null){
+        if (this.mData != null){
             displayData();
         }
     }
-
-
-
 
 
     ///// CallBacks ////
@@ -159,8 +159,8 @@ public class MainActivity extends AppCompatActivity {
                 fetchData();
 
             } else {
-
-                //TODO permission denied, disable feature or ask user again
+                AlertDialog dialog = DisplayUtil.getPermissionDialog(this);
+                dialog.show();
             }
         }
 
