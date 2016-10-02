@@ -8,6 +8,7 @@ public class CallLogItem {
     private String callDuration;
     private String callType;
     private String date;
+    private String photoURI;
 
     /**
      * Public constructor
@@ -45,5 +46,21 @@ public class CallLogItem {
      */
     public String getTimeString() {
         return date;
+    }
+
+    /**
+     * Returns the photoURI
+     * @return uri or null if empty
+     */
+    public String getPhotoURI(){
+        return photoURI;
+    }
+
+    /**
+     * Sets the photo uri
+     * @param uri
+     */
+    public void setPhotoURI(String uri){
+        photoURI = uri;
     }
 }

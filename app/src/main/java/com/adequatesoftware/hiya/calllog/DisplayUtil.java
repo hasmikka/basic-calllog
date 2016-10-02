@@ -1,4 +1,4 @@
-package com.adequatesoftware.hiya.calllog.datamodel;
+package com.adequatesoftware.hiya.calllog;
 
 import android.app.Activity;
 import android.support.v7.app.AlertDialog;

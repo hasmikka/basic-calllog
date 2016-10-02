@@ -4,4 +4,6 @@
     <string name="alert_message">We cannot show you your call log without the read permission. Sorry!</string>
 
     <string name="common_ok">Ok</string>
+    <string name="please_wait">Please wait while we fetch your call log</string>
+    <string name="no_calls">You have not made any calls yet!</string>
 </resources>
