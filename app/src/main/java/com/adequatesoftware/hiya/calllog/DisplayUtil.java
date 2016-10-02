@@ -5,8 +5,6 @@ import android.support.v7.app.AlertDialog;
 import android.content.DialogInterface;
 import android.provider.CallLog;
 
-import com.adequatesoftware.hiya.calllog.R;
-
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
@@ -68,19 +66,22 @@ public class DisplayUtil {
         return formatted;
     }
 
-    public static AlertDialog getPermissionDialog(final Activity activity){
+    /**
+     * Returns a dialog that upon exit closes activity
+     * @param activity
+     * @return dialog
+     */
+    public static AlertDialog getPermissionReadLogDialog(final Activity activity){
         AlertDialog.Builder builder = new AlertDialog.Builder(activity);
-        builder.setMessage(activity.getString(R.string.alert_title))
-               .setTitle(R.string.alert_message);
+        builder.setMessage(activity.getString(R.string.alert_rl_message))
+               .setTitle(R.string.alert_rl_title);
 
-        // Add the buttons
-        builder.setPositiveButton(R.string.common_ok, new DialogInterface.OnClickListener() {
+        builder.setNeutralButton(R.string.common_ok, new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int id) {
                 // User clicked OK button
                 activity.finish();
             }
         });
        return builder.create();
-
     }
 }

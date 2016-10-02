@@ -1,9 +1,12 @@
 <resources>
     <string name="app_name">Call Log</string>
-    <string name="alert_title">Uh Oh</string>
-    <string name="alert_message">We cannot show you your call log without the read permission. Sorry!</string>
+    <string name="alert_rl_title">Uh Oh</string>
+    <string name="alert_rl_message">We cannot show you your call log without the read permission. Sorry!</string>
+    <string name="alert_cs_title">Permission</string>
+    <string name="alert_cs_message">You will not see live updates to the call log without this permission.</string>
 
     <string name="common_ok">Ok</string>
+    <string name="change_mind">I changed my mind</string>
     <string name="please_wait">Please wait while we fetch your call log</string>
     <string name="no_calls">You have not made any calls yet!</string>
 </resources>

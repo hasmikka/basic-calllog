@@ -17,39 +17,29 @@ import android.view.View;
 import android.widget.TextView;
 
 import com.adequatesoftware.hiya.calllog.datamodel.CallLogItem;
+import com.adequatesoftware.hiya.calllog.telephony.Events;
+
+import org.greenrobot.eventbus.EventBus;
+import org.greenrobot.eventbus.Subscribe;
 
 import java.util.ArrayList;
 
+public class MainActivity extends AppCompatActivity {
 
-/**
- * TODO:
- * <p/>
- * animations
- * live-listening to changes in log
- * javadoc for everying
- * styles for fonts
- * define empty state for no call log
- * error handling
- * analytics?
- * cursor adapter?
- */
-
-public class MainActivity extends AppCompatActivity{
-
-    private static int MY_PERMISSIONS_REQUEST_READ_LOGS = 22;
+    private static int PERMISSIONS_REQUEST_READ_LOGS = 22;
+    private static int PERMISSIONS_REQUEST_PHONE_STATE = 21;
     private static int MAXIMUM_NUMBER_LOG_REQUESTED = 50;
     private ArrayList<CallLogItem> mData;
     private CallLogAdapter mAdapter;
     private RecyclerView mCallListRecycleView;
     private SwipeRefreshLayout mSwipeLayout;
     private TextView mWarningText;
+    private boolean mCanCheckForCalls;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-        mData = fakeSumDataBiotch();
 
         mWarningText = (TextView) findViewById(R.id.main_warning);
 
@@ -61,6 +51,9 @@ public class MainActivity extends AppCompatActivity{
         mCallListRecycleView.setAdapter(mAdapter);
 
         setupSwipeRefresh();
+
+        fetchCallLogData();
+
 
     }
 
@@ -84,29 +77,16 @@ public class MainActivity extends AppCompatActivity{
         });
     }
 
-    //TODO
-    private ArrayList<CallLogItem> fakeSumDataBiotch() {
-        ArrayList<CallLogItem> data = new ArrayList<CallLogItem>();
-        data.add(new CallLogItem("452-533-7643", "10", "Incoming", "10:34 PM, 9/14/2015"));
-        data.add(new CallLogItem("452-533-7643", "10", "Incoming", "10:34 PM, 9/14/2015"));
-        data.add(new CallLogItem("452-533-7643", "10", "Incoming", "10:34 PM, 9/14/2015"));
-        data.add(new CallLogItem("452-533-7643", "10", "Incoming", "10:34 PM, 9/14/2015"));
-        data.add(new CallLogItem("452-533-7643", "10", "Incoming", "10:34 PM, 9/14/2015"));
-        data.add(new CallLogItem("452-533-7643", "10", "Incoming", "10:34 PM, 9/14/2015"));
-        data.add(new CallLogItem("452-533-7643", "10", "Incoming", "10:34 PM, 9/14/2015"));
-
-        return data;
-    }
-
     @Override
     public void onStart() {
         super.onStart();
+        EventBus.getDefault().register(this);
+    }
 
-        if (mData != null) {
-            displayData();
-        } else {
-            fetchCallLogData();
-        }
+    @Override
+    public void onStop() {
+        EventBus.getDefault().unregister(this);
+        super.onStop();
     }
 
     private void displayData() {
@@ -129,18 +109,17 @@ public class MainActivity extends AppCompatActivity{
     private void fetchCallLogData() {
 
         //check permission
-        int permissionCheck = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CALL_LOG);
+        int callLogPermissionCheck = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CALL_LOG);
 
-        if (permissionCheck == PackageManager.PERMISSION_GRANTED) {
-            fetchData();
+        if (callLogPermissionCheck == PackageManager.PERMISSION_GRANTED) {
+            fetchData(null);
         } else {
-            ActivityCompat.requestPermissions(this, new String[] {Manifest.permission.READ_CALL_LOG}, MY_PERMISSIONS_REQUEST_READ_LOGS);
+            ActivityCompat.requestPermissions(this, new String[] {Manifest.permission.READ_CALL_LOG}, PERMISSIONS_REQUEST_READ_LOGS);
         }
-
     }
 
     //this is what gets called when permissions have been granted
-    private void fetchData() {
+    private void fetchData(Events.PhoneCallStateChangeEvent event) {
         ArrayList<CallLogItem> data = new ArrayList<>();
 
         try {
@@ -164,9 +143,10 @@ public class MainActivity extends AppCompatActivity{
                 String dateStr = DisplayUtil.getDate(cursor.getString(date));
 
                 //get number
-                String num = cursor.getString(number);
+                String numVal = cursor.getString(number);
+                String num = numVal.isEmpty() ? "Unknown" : numVal;
 
-                //TODO
+                //TODO add pictures
                 CallLogItem item = new CallLogItem(DisplayUtil.formatNumber(num), cursor.getString(duration), typeValStr, dateStr);
                 item.setPhotoURI(cursor.getString(photoURI));
 
@@ -179,9 +159,7 @@ public class MainActivity extends AppCompatActivity{
 
         this.mData = data;
 
-        if (this.mData != null) {
-            displayData();
-        }
+        displayData();
     }
 
 
@@ -189,18 +167,28 @@ public class MainActivity extends AppCompatActivity{
 
     @Override
     public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
-        if (MY_PERMISSIONS_REQUEST_READ_LOGS == requestCode) {
+        if (PERMISSIONS_REQUEST_READ_LOGS == requestCode) {
             // If request is cancelled, the result arrays are empty.
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
 
-                fetchData();
+                fetchData(null);
 
             } else {
-                AlertDialog dialog = DisplayUtil.getPermissionDialog(this);
+                AlertDialog dialog = DisplayUtil.getPermissionReadLogDialog(this);
                 dialog.show();
             }
+        } else if (PERMISSIONS_REQUEST_PHONE_STATE == requestCode){
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                mCanCheckForCalls = true;
+            } else {
+                mCanCheckForCalls = false;
+            }
         }
+    }
 
+    @Subscribe
+    public void onPhoneCallStateChanged(Events.PhoneCallStateChangeEvent event) {
+        fetchData(event);
     }
 
 }
